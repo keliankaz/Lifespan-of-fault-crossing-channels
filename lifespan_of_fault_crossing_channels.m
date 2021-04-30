@@ -18,7 +18,7 @@ yr2sec = @(yrs) yrs*60*60*24*365;
 %% analysis
 
 % Load data
-dataTbl         = readtable('DATA_v2.csv');
+dataTbl         = readtable('DATA.csv');
 
 % data removed in revision because the mechanism and interpretation of
 % offset were not sufficiently straighforward.

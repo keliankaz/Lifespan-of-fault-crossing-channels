@@ -200,7 +200,7 @@ if nargin == 0
 
             [x,z]   = simple_profile(S0,dx,L);
             N       = 100; % order of fourier expansion
-            nEq     = 20;
+            nEq     = 200;
             vcmyr   = 3.3;% slip velocity (cm/year)
             v       = vcmyr / 100 /yr2sec(1); % m/s
             k       = 0.1*r*L/2/yr2sec(1); % m^2/s
@@ -210,14 +210,14 @@ if nargin == 0
 
 
             w0              = 3;   % width of the fault zone (m)
-            hc              = 5;    % height to avulse (loosely based on the channel height at wallace creek
+            hc              = 8;    % height to avulse (loosely based on the channel height at wallace creek
             avulseYN        = true;
             shutterRidgeSp  = 100; % (m) Perron ~ Dragon's back
             shutterRidgeHeight = 0.00;
             upliftRate      = 0.000*v/yr2sec(1); % (m/s)
             hcfh            = @(t) ...
                 hc + shutterRidgeHeight*abs(sin(2*pi*v*t/(2*shutterRidgeSp))) + upliftRate*t; % hill-looking thing + uplift
-            showLive        = false;
+            showLive        = true;
             tc = eq_cycle_channel_model(x,z,dx,w0, ...                         % Geometry
                                         k, N,      ...                         % Diffusion
                                         recurranceInterval, offsetArray, ...   % Earthquakes
@@ -335,7 +335,7 @@ function tc = eq_cycle_channel_model(x,z,dx,w0, ...                         % Ge
         [x0,xx] = deal(x);
         nEq= length(recurranceInterval);
         
-        figure
+        figure; set(gcf,'color','w');
         
         subplot(2,2,1); 
         ph0 = plot(x0,z0,'Color',[1 0 0]); hold on

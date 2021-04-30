@@ -1,6 +1,6 @@
 # Lifespan of fault crossing channels
 
-This repository contains data and source code for the analysis of fault crossing channel in Dascher-Cousineau, Finnegan and Brodsky, 2021. The dataset contains measurements of channel offset, slope, drainage area, and avulsion thresholds derived from B4 lidar along the Carrizo Plain section of the San Andreas Fault. combined_v3.pdf features a map of each measurement in the dataset. 
+This repository contains data and source code for the analysis of fault crossing channel in Dascher-Cousineau, Finnegan and Brodsky, 2021. The dataset contains measurements of channel offset, slope, drainage area, and avulsion thresholds derived from B4 lidar along the Carrizo Plain section of the San Andreas Fault. combined_v3.pdf features a map of each measurement in the dataset. Please refer to the manuscript suplement for further information of the measurement protocol.
 
 ## Quick start:
 

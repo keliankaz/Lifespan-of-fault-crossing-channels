@@ -18,7 +18,12 @@ yr2sec = @(yrs) yrs*60*60*24*365;
 %% analysis
 
 % Load data
-dataTbl         = readtable('DATA.txt');
+dataTbl         = readtable('DATA_v2.csv');
+
+% data removed in revision because the mechanism and interpretation of
+% offset were not sufficiently straighforward.
+dataTbl         = dataTbl(~isnan(dataTbl.z1),:);
+
 Ndata           = height(dataTbl);
 
 % Diffusivity calculated following Paola 1992
@@ -37,7 +42,7 @@ dataTbl.vx      = 3.5*10^-2/yr2sec(1) ...       % m/s   slip rate
                     * ones(Ndata,1);
 
 % Calculate the avulsion time scale (equation 3)
-Tc = (2*(dataTbl.hc).^2)./(dataTbl.kappa.*(dataTbl.S0).^2);
+Tc = (4*(dataTbl.hc).^2)./(dataTbl.kappa.*(dataTbl.S0).^2);
 
 % Calulate the ratio d_obs/dc (equation 4)
 Tnorm = dataTbl.offset./dataTbl.vx./Tc;
@@ -55,7 +60,7 @@ rc =[dataTbl.xc,dataTbl.yc];
 dr =sqrt(sum((ones(length(rc),1)*r0-rc).^2,2))./1000; % Distance along strike (in km)
 
 % Offset, d_obs [m]
-subplot(4,1,1); hold on;
+subplot(5,1,1); hold on;
 scatter(dr(I), dataTbl.offset(I), sz,assign_TLC(dataTbl.stage(I)), 'filled','Markerfacealpha',al);
 scatter(dr(~I),dataTbl.offset(~I),sz,assign_TLC(dataTbl.stage(~I)),'LineWidth',wt);
 set(gca,'yscale','log')
@@ -63,7 +68,7 @@ xticks([])
 ylabel({'Offset, d (m)'})
 
 % Avulsion Threshold height, h_c [m]
-subplot(4,1,2); hold on
+subplot(5,1,2); hold on
 scatter(dr(I), dataTbl.hc(I), sz,assign_TLC(dataTbl.stage(I)), 'filled','Markerfacealpha',al);
 scatter(dr(~I),dataTbl.hc(~I),sz,assign_TLC(dataTbl.stage(~I)),'LineWidth',wt);
 set(gca,'yscale','log')
@@ -71,14 +76,23 @@ xticks([])
 ylabel({'Threshold','height, h_c (m)'})
 
 % Initial slole, S_0 []
-subplot(4,1,3); hold on
+subplot(5,1,3); hold on
 scatter(dr(I), dataTbl.S0(I), sz,assign_TLC(dataTbl.stage(I)), 'filled','Markerfacealpha',al);
 scatter(dr(~I),dataTbl.S0(~I),sz,assign_TLC(dataTbl.stage(~I)),'LineWidth',wt);
 xticks([])
 ylabel({'Slope, S_o'})
 
+% Catchement length
+subplot(5,1,4); hold on
+scatter(dr(I), dataTbl.Reach(I), sz,assign_TLC(dataTbl.stage(I)), 'filled','Markerfacealpha',al);
+scatter(dr(~I),dataTbl.Reach(~I),sz,assign_TLC(dataTbl.stage(~I)),'LineWidth',wt);
+set(gca,'yscale','log')
+xticks([])
+ylabel({'Reach, L (m)'})
+
+
 % d_obs/d_c []
-subplot(4,1,4); hold on;
+subplot(5,1,5); hold on;
 scatter(dr(I),Tnorm(I),sz, ...
     assign_TLC(dataTbl.stage(I)),'filled','Markerfacealpha',al);
 scatter(dr(~I),Tnorm(~I),sz, ...
@@ -89,7 +103,7 @@ ylabel('^{d_{obs}}/_{d_c}')
 
 set(gca,'YMinorTick','on')
 set(findall(gcf,'-property','Fontsize'),'Fontsize',10)
-setsize(gcf,3.5,5)
+setsize(gcf,3.5,6)
 
 
 %% Figure 3
@@ -97,7 +111,7 @@ setsize(gcf,3.5,5)
 sz = 50;
 I = Tnorm > 0;
 
-% Fit logistic regression through the categorical data (Active/abandonned)
+% Fit logistic regression through the categorical data (Active/abandoned)
 [B,sdev, stats]     = mnrfit(log10(Tnorm(I)),categorical(~dataTbl.IsActive(I)));
 logisticReg         = @(x,b0,b1) 1./(1+exp(-(b0+b1*x)));
 
@@ -108,45 +122,49 @@ interval = (1-prctRange)./prctRange;
 TcNormFit = 10^((log(1)-B(1))/B(2));
 TcConfInt = 10.^((log(interval)-B(1))/B(2));
 
+disp([num2str(TcNormFit),' best separates active and abandoned channels'])
+disp(['where p = ',num2str(stats.p(2)), ' is the probability that B(2) 0 (no division in data)'])
+
 % "Direct" measurements of Tc
-Iyellow = Tnorm > 0 & strcmp(dataTbl.stage,'yellow') & ~isnan(Tnorm);
-
-% Combined maxlikelihood
-logTn          = [mean(log10(Tnorm(Iyellow))), log10(TcNormFit)];
-logTnSig       = [std(log10(Tnorm(Iyellow))),  diff(log10(TcConfInt))/2] ;
-
-NormExp = (sum(logTn./logTnSig.^2)/sum(1./logTnSig.^2));
-NormExpSig = 1./sum(1./logTnSig.^2);
-
+Iyellow = Tnorm > 0 & strcmp(dataTbl.stage,'yellow');
 
 figure; hold on
 
-% Data
-pth = scatter((Tnorm(I)),dataTbl.IsActive(I),sz,assign_TLC(dataTbl.stage(I)),'Filled','MarkerFaceAlpha',0.5);
+% Confidence interval
+rh = rectangle('Position',[TcConfInt(1),0,diff(TcConfInt),1],...
+          'FaceColor',[0.2 0.2 0.2 0.2], ...
+          'EdgeColor','none');
+
+% Data 
+pth = scatter((Tnorm(I)),dataTbl.IsActive(I),sz,assign_TLC(dataTbl.stage(I)), ...
+                'Filled', ...
+                'MarkerFaceAlpha',0.7);
 
 % Fit
 tNormVecLog = linspace(min(log10(Tnorm(I))),max(log10(Tnorm(I))),100);
 lh = plot(10.^tNormVecLog,logisticReg(tNormVecLog,B(1),B(2)),'--k','linewidth',2);
-
-% Confidence interval
-rh = rectangle('Position',[TcConfInt(1),0,diff(TcConfInt),1],...
-          'FaceColor',[0.9290 0.6940 0.1250 0.2], ...
-          'EdgeColor','none');
       
 xlabel('d_{obs}/d_c')   
 set(gca,'xscale','log',...
         'ytick',[0,1],...
-        'yticklabel',{'Abandonned','Active'})
-    
+        'yticklabel',{'Abandoned','Active'}, ...
+        'xtick',[10^-2,10^0,10^2])
+
 % Incipient/recent avulsions
 yyaxis right
-edges = logspace(log10(min(Tnorm(Iyellow ))),log10(max(Tnorm(Iyellow))), 10);
-histogram(Tnorm(Iyellow),edges, ...
-    'facecolor', [0.9290 0.6940 0.1250],'edgecolor','none')
+edges = logspace(log10(min(Tnorm(Iyellow))-eps(1)),log10(max(Tnorm(Iyellow))), 10);
+hh = histogram(Tnorm(Iyellow),edges, ...
+    'facecolor', [0.9290 0.6940 0.1250], ...
+    'edgecolor','none', ...
+    'facealpha',0.4);
 YLIM = ylim; 
 ylim([YLIM(1),YLIM(2)*2])
+
+set(gca,'Xscale','log')
+
 ylabel({'Recent/Incipient','Avulsion'})
 grid
+% legend(lh,['1/(1+e^{-(\beta_0+\beta_1 x)}', newline, 'p(\beta_1>0)=', num2str(stats.p(2),1)])
 
 set(findall(gcf,'-property','Fontsize'),'Fontsize',10)
 setsize(gcf,3.5,1.5)

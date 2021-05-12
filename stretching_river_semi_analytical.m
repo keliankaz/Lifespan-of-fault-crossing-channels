@@ -3,7 +3,7 @@ function tc = stretching_river_semi_analytical(S0,reach,r,v,w0,hc)
 yr2sec  = @(yr) yr*(60*60*24*365);
 
 if nargin == 0
-    example = 8;
+    example = 8; % toggle through these examples (1-8) to get a walkthrough of the approach
     switch example
         case 1
             %% Example #1: Heaviside function
@@ -141,15 +141,15 @@ if nargin == 0
             [x,z] = simple_profile(S0,dx,L);
 
             % diffusive terms
-            N = 1000; % This defines the number of sinusoidal terms in the fourier expansion
-            k = 5;
+            N = 1000;                               % This defines the number of sinusoidal terms in the fourier expansion
+            k = 0.05;
 
             nEq = 100;
 
-            recurranceInterval = 2*10*rand(1,nEq); % population of recurrence intervals
-            offsetArray = 2*0.1*rand(1,nEq); % population of slips (charecteristic in this case)
-            w0 = 1; % width of the fault zone
-            hc = 0.1; % possible to make this related to water level
+            recurranceInterval = 2*10*rand(1,nEq);  % population of recurrence intervals
+            offsetArray = 2*0.1*rand(1,nEq);        % population of slips (charecteristic in this case)
+            w0 = 1;                                 % width of the fault zone
+            hc = 0.1;                               % possible to make this related to water level
             avulseYN = true;
             showLive = true;
 
@@ -170,7 +170,7 @@ if nargin == 0
 
             % diffusive terms
             N = 1000; % This defines the number of sinusoidal terms in the fourier expansion
-            k = 0.5; 
+            k = 0.05*10^-7; 
 
             nEq = 500;
             v = 0.01;
@@ -192,30 +192,30 @@ if nargin == 0
         case 8
             %% Example #8: Exploring realistic parameters
 
-            S0      = 0.05;% slope (Rise over run)
-            dx      = 1; % point spacing (m) 
+            S0      = 0.05; % slope (Rise over run)
+            dx      = 1;    % point spacing (m) 
             L       = 3000; % domain size (m)
 
             r       = 0.05; % annual rainfall (m)
 
             [x,z]   = simple_profile(S0,dx,L);
-            N       = 100; % order of fourier expansion
-            nEq     = 200;
-            vcmyr   = 3.3;% slip velocity (cm/year)
-            v       = vcmyr / 100 /yr2sec(1); % m/s
-            k       = 0.1*r*L/2/yr2sec(1); % m^2/s
+            N       = 100;  % order of fourier expansion
+            nEq     = 20; 
+            vcmyr   = 3.3;  % slip velocity (cm/year)
+            v       = vcmyr / 100 /yr2sec(1);   % m/s
+            k       = 0.1*r*L/2/yr2sec(1);      % m^2/s
 
             recurranceInterval  = yr2sec(500)*ones(1,nEq);
             offsetArray         = v*(recurranceInterval);
 
 
-            w0              = 3;   % width of the fault zone (m)
-            hc              = 8;    % height to avulse (loosely based on the channel height at wallace creek
-            avulseYN        = true;
-            shutterRidgeSp  = 100; % (m) Perron ~ Dragon's back
-            shutterRidgeHeight = 0.00;
-            upliftRate      = 0.000*v/yr2sec(1); % (m/s)
-            hcfh            = @(t) ...
+            w0              = 3;        % width of the fault zone (m)
+            hc              = 5;        % height to avulse (loosely based on the channel height at wallace creek
+            avulseYN        = true;    % simulate avulsions
+            shutterRidgeSp  = 100;      % shutter ridge spacing (m)
+            shutterRidgeHeight = 0.00;  % add amplitude here to simulate shutter ridge
+            upliftRate      = 0.000*v/yr2sec(1); % (m/s) add uplift here to simulate uplift
+            hcfh            = @(t) ...     
                 hc + shutterRidgeHeight*abs(sin(2*pi*v*t/(2*shutterRidgeSp))) + upliftRate*t; % hill-looking thing + uplift
             showLive        = true;
             tc = eq_cycle_channel_model(x,z,dx,w0, ...                         % Geometry
@@ -223,18 +223,6 @@ if nargin == 0
                                         recurranceInterval, offsetArray, ...   % Earthquakes
                                         hcfh, avulseYN, ...                    % Channel
                                         showLive);
-
-%            subplot(2,2,[2,4])                       
-%            hold on;
-%            t = linspace(0,tc(1),50);
-% 
-%            h_equilibrated = S0*L/2*v*t/2./(v*t/2+L/2);
-%            h_wedge        = sqrt(k*S0^2*t/2);
-%            h_diff         = S0*sqrt(k*t)*v.*t/2./(v*t/2+sqrt(k*t));
-% 
-%            plot(t,h_equilibrated)
-%            plot(t,h_wedge)
-%            plot(t,h_diff)
 
     end
 
@@ -364,6 +352,7 @@ function tc = eq_cycle_channel_model(x,z,dx,w0, ...                         % Ge
             
             % plot the profile after it has diffused (right before the next
             % earthquake)
+            
             subplot(2,2,1); 
             lp = plot(x,z, ...
                 'Color',[1-sum(recurranceInterval(1:n))/T,0,sum(recurranceInterval(1:n))/T]);
@@ -393,7 +382,7 @@ function tc = eq_cycle_channel_model(x,z,dx,w0, ...                         % Ge
             
             curvature  = gradient(gradient(z, x),x);
             curvNorm   = curvature/max(abs(curvature));
-            lp = plot(x,curvNorm, ...
+            plot(x,curvNorm, ...
                 'Color',[1-sum(recurranceInterval(1:n))/T,0,sum(recurranceInterval(1:n))/T]);
             I = x>xc & x<(xc + wInProfile);
             
@@ -425,9 +414,9 @@ function tc = eq_cycle_channel_model(x,z,dx,w0, ...                         % Ge
                     % Resest the channel to the original form beyond xc
                     % this is not necessarily as straight forward as it may
                     % seem...
-                    z = [z(1:Ic),z0((Ic+1):end)];                    % reset to original channel after the critical point
-                    % z = [z(1:Ic),z0((Ic+1):end) + (z(Ic)-z0(Ic+1))]; % reset to the original channel after the critical point, but shifted up by the aggradation at xc
-                    % z = [z(1:Ic),z(Ic)-z(Ic)*(x0((Ic+1):end)-xc)/(max(x0)-xc)]; % reset to return to base level over the original domain size from xc
+                    z = [z(1:Ic),z0((Ic+1):end)];                                   % reset to original channel after the critical point
+                    % z = [z(1:Ic),z0((Ic+1):end) + (z(Ic)-z0(Ic+1))];              % reset to the original channel after the critical point, but shifted up by the aggradation at xc
+                    % z = [z(1:Ic),z(Ic)-z(Ic)*(x0((Ic+1):end)-xc)/(max(x0)-xc)];   % reset to return to base level over the original domain size from xc
                     % z = [z(1:Ic), (z0(Ic+1)+hcfh(ti))-((z0(Ic+1)+hcfh(ti))-z0(end))/(max(x0)-xc)*(x0((Ic+1):end)-xc)];
                     x = [x(1:Ic),x0((Ic+1):end)];
                     
@@ -450,40 +439,46 @@ function tc = eq_cycle_channel_model(x,z,dx,w0, ...                         % Ge
        
         
         tc = tc(2:end);
-        
-        t = cumsum(recurranceInterval);
+        yr2sec  = @(yr) yr*(60*60*24*365);
+        t = cumsum(recurranceInterval)/yr2sec(1)/1000;
         ax1 = subplot(2,2,[2,4]); hold on
         plot(t,zxc-zxc0,'.-')
-        ylabel('z(x_c,t)-z(x_c,0) [m]')
-        xlabel('Time')
+        ylabel('Aggradation [m]')
+        xlabel('Time (kyr)')
         phhc = plot(t,hcfh(t),'--');
         legend(phhc,'h_c')
         set(gca,'Ylim',[0,max(zxc-zxc0)*1.5])
-        
-        ax1_pos = ax1.Position; % position of first axes
-%         ax2 = axes('Position',ax1_pos,...
-%             'XAxisLocation','top',...
-%             'ytick',[],...
-%             'Color','none');
-%         set(ax2,'Xlim',[0,sum(offsetArray)])
-%         xlabel('Cumulative offset (m)')
 
         t = title('c)'); 
-        set(t,'Units','normalized','Position',[-0.2,0.95])
+        set(t,'Units','normalized','Position',[-0.22,0.95])
         
         subplot(2,2,1);
         try legend([ph0,lp],{'Initial profile','Final profile'}); catch; legend(lp,'Final profile'); end
-        ylabel('Elevation')
+        ylabel('Elevation [m]')
         t = title('a)'); 
-        set(t,'Units','normalized','Position',[-0.2,0.95])
+        set(t,'Units','normalized','Position',[-0.22,0.95])
         
         subplot(2,2,3);
-        xlabel('Along profile distance')
+        xlabel('Along profile distance [m]')
+        ylabel('Normalized Curvature')
         
         t = title('b)'); 
-        set(t,'Units','normalized','Position',[-0.2,0.95])
+        set(t,'Units','normalized','Position',[-0.22,0.95])
         
-        
+        ftsz    = @(fh,fontSize) set(findall(fh,'-property','FontSize'),'FontSize',fontSize);
+        setsize = @(fh,dim1,dim2) set(fh,...
+            'Units',        'Inches', ...
+            'Position',     [0,0,dim1,dim2],...
+            'PaperUnits',   'Inches',...
+            'PaperSize',    [dim1,dim2]);
+        ftsz(gcf,12)
+        setsize(gcf,7,3.5)
 
+end
+
+% substitude for minmax
+function OUT = minmax(A)
+
+OUT = [min(A),max(A)];
 
 end

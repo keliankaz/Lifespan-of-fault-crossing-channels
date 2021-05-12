@@ -2,7 +2,7 @@
 % fault-crossing channels". The file DATA.txt must be in the same directory
 
 % Author: Kelian Dascher-Cousineau
-% Last edited: September 2020
+% Last edited: May 2021
 % Written and tested with Matlab 2020a (academic liscence)
 
 
@@ -20,20 +20,21 @@ yr2sec = @(yrs) yrs*60*60*24*365;
 % Load data
 dataTbl         = readtable('DATA.csv');
 
-% data removed in revision because the mechanism and interpretation of
+% Data removed in revision because the mechanism and interpretation of
 % offset were not sufficiently straighforward.
 dataTbl         = dataTbl(~isnan(dataTbl.z1),:);
 
 Ndata           = height(dataTbl);
 
-% Diffusivity calculated following Paola 1992
+% Diffusivity calculated following Paola 1992 (see supplement section S3)
 cf              = 0.01; % drag coefficient
 Co              = 0.7;  % sediment concentration
-s               = 2.7;  % specific density of sediment(g/cm^3)
-r               = 0.05; % m^3/m^2 rainfall per year
+s               = 2.7;  % specific density of sediment (unitless)
+r               = 0.05; % m/yr rainfall Spotila et al., 2007
 epsilon         = 0.4;  % unitless
 A               = (epsilon/(1+epsilon))^(3/2); % channel geometry
 q               = r*dataTbl.Reach;             % Basin River flux (m^2/s) (width normalized)
+
 kappa           = 8*A*sqrt(cf)/(Co*(s-1)) * q / yr2sec(1); % diffusivity (m^2/s)
 dataTbl.kappa   = kappa;
 
@@ -75,14 +76,14 @@ set(gca,'yscale','log')
 xticks([])
 ylabel({'Threshold','height, h_c (m)'})
 
-% Initial slole, S_0 []
+% Initial slope, S_0 []
 subplot(5,1,3); hold on
 scatter(dr(I), dataTbl.S0(I), sz,assign_TLC(dataTbl.stage(I)), 'filled','Markerfacealpha',al);
 scatter(dr(~I),dataTbl.S0(~I),sz,assign_TLC(dataTbl.stage(~I)),'LineWidth',wt);
 xticks([])
 ylabel({'Slope, S_o'})
 
-% Catchement length
+% Catchement length [m]
 subplot(5,1,4); hold on
 scatter(dr(I), dataTbl.Reach(I), sz,assign_TLC(dataTbl.stage(I)), 'filled','Markerfacealpha',al);
 scatter(dr(~I),dataTbl.Reach(~I),sz,assign_TLC(dataTbl.stage(~I)),'LineWidth',wt);
@@ -115,17 +116,18 @@ I = Tnorm > 0;
 [B,sdev, stats]     = mnrfit(log10(Tnorm(I)),categorical(~dataTbl.IsActive(I)));
 logisticReg         = @(x,b0,b1) 1./(1+exp(-(b0+b1*x)));
 
-% Confidence intervals are computed directly from the logistic regression
+% 1 sigma Confidence intervals are computed directly from the logistic regression
 prctRange = [50-66/2,50+66/2]/100;
 interval = (1-prctRange)./prctRange;
 
-TcNormFit = 10^((log(1)-B(1))/B(2));
+TcNormFit = 10^(-B(1)/B(2));
 TcConfInt = 10.^((log(interval)-B(1))/B(2));
 
 disp([num2str(TcNormFit),' best separates active and abandoned channels'])
 disp(['where p = ',num2str(stats.p(2)), ' is the probability that B(2) 0 (no division in data)'])
 
-% "Direct" measurements of Tc
+% measurements of Tc derived from incipitent or recent avulsions (yellow
+% points)
 Iyellow = Tnorm > 0 & strcmp(dataTbl.stage,'yellow');
 
 figure; hold on
@@ -186,5 +188,3 @@ end
 end
 
 end
-
-

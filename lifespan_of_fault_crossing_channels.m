@@ -110,40 +110,42 @@ setsize(gcf,3.5,6)
 %% Figure 3
 
 sz = 50;
-I = Tnorm > 0;
 
 % Fit logistic regression through the categorical data (Active/abandoned)
-[B,sdev, stats]     = mnrfit(log10(Tnorm(I)),categorical(~dataTbl.IsActive(I)));
+[B,sdev, stats]     = mnrfit(log10(Tnorm),categorical(~dataTbl.IsActive));
 logisticReg         = @(x,b0,b1) 1./(1+exp(-(b0+b1*x)));
 
-% 1 sigma Confidence intervals are computed directly from the logistic regression
-prctRange = [50-66/2,50+66/2]/100;
-interval = (1-prctRange)./prctRange;
+TcNormFit = 10.^class_boundary(log10(Tnorm),~dataTbl.IsActive);
 
-TcNormFit = 10^(-B(1)/B(2));
-TcConfInt = 10.^((log(interval)-B(1))/B(2));
+% confidence intervals are established using nboot bootstrap samples and
+% identifying the class boundary
+rng(1) % set  random seed
+nboot = 10000;
+TcBootCi = 10.^bootci(nboot, ...
+                      {@class_boundary,log10(Tnorm),~dataTbl.IsActive}, ...
+                      'alpha',0.01); % 99% CI
+
 
 disp([num2str(TcNormFit),' best separates active and abandoned channels'])
 disp(['where p = ',num2str(stats.p(2)), ' is the probability that B(2) 0 (no division in data)'])
 
-% measurements of Tc derived from incipitent or recent avulsions (yellow
-% points)
+% measurements of Tc derived from incipitent or recent avulsions (yellow points)
 Iyellow = Tnorm > 0 & strcmp(dataTbl.stage,'yellow');
 
 figure; hold on
 
-% Confidence interval
-rh = rectangle('Position',[TcConfInt(1),0,diff(TcConfInt),1],...
+% 99% Confidence interval
+rh = rectangle('Position',[TcBootCi(1),0,diff(TcBootCi),1],...
           'FaceColor',[0.2 0.2 0.2 0.2], ...
           'EdgeColor','none');
 
 % Data 
-pth = scatter((Tnorm(I)),dataTbl.IsActive(I),sz,assign_TLC(dataTbl.stage(I)), ...
+pth = scatter((Tnorm),dataTbl.IsActive,sz,assign_TLC(dataTbl.stage), ...
                 'Filled', ...
                 'MarkerFaceAlpha',0.7);
 
 % Fit
-tNormVecLog = linspace(min(log10(Tnorm(I))),max(log10(Tnorm(I))),100);
+tNormVecLog = linspace(min(log10(Tnorm)),max(log10(Tnorm)),100);
 lh = plot(10.^tNormVecLog,logisticReg(tNormVecLog,B(1),B(2)),'--k','linewidth',2);
       
 xlabel('d_{obs}/d_c')   
@@ -166,12 +168,20 @@ set(gca,'Xscale','log')
 
 ylabel({'Recent/Incipient','Avulsion'})
 grid
-% legend(lh,['1/(1+e^{-(\beta_0+\beta_1 x)}', newline, 'p(\beta_1>0)=', num2str(stats.p(2),1)])
 
 set(findall(gcf,'-property','Fontsize'),'Fontsize',10)
 setsize(gcf,3.5,1.5)
 
 %%
+
+
+function CB = class_boundary(X,Y)
+
+[B,~, ~] = mnrfit(X,categorical(Y));
+CB = -B(1)/B(2);
+
+end
+
 function c = assign_TLC(color)
 
 for n = 1:length(color)
@@ -188,3 +198,5 @@ end
 end
 
 end
+
+

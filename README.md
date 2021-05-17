@@ -10,6 +10,7 @@ Download this repository and open Matlab (develloped using MatLab_R2020a).
 
 `stretching_river_semi_analytical` in the command prompt produces figure S1, a semi-analytical solution to incrementally stretching a fault parallel section and subsequently evolving the channel profile in the inter-event period.
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4766502.svg)](https://doi.org/10.5281/zenodo.4766502)
 
 
 
